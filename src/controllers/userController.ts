@@ -21,15 +21,15 @@ export class UserController {
     }, { expiresIn: '180d' })
   }
 
-  static async login(req, res, next) {
+  static login = async (req, res, next) => {
     const { password } = req.body
 
     try {
       const isUserPassword = await BCrypt.compare(password, req.user.password)
-
+      
       if (isUserPassword) {
         res.json({
-          token: "",
+          token: this.generateUserJwtToken(req.user._id, req.user.email),
           user: req.user
         })
       } else {
