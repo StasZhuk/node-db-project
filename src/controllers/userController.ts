@@ -2,6 +2,7 @@ import User from "../models/User"
 import { validationResult } from 'express-validator'
 import Utils from "../utils/Utils"
 import NodeMailer from "../utils/NodeMailer"
+import BCrypt from "../utils/BCrypt"
 
 type SendVerifyEmailProps = {
   email: string;
@@ -29,16 +30,19 @@ export class UserController {
       status,
     } = req.body
 
-    const userData = {
-      name,
-      email,
-      phone,
-      password,
-      type: type || "customer",
-      status: status || "active",
-    }
-
+    
+    
     try {
+      const encryptedPassword = await BCrypt.encrypt(password)
+      const userData = {
+        name,
+        email,
+        phone,
+        password: encryptedPassword,
+        type: type || "customer",
+        status: status || "active",
+      }
+
       const user = await new User(userData).save()
       await this.sendVerifyEmail({
         subject: "Verify your email",
@@ -50,14 +54,6 @@ export class UserController {
     } catch (error) {
       next(error)
     }
-
-    // user.save()
-    //   .then((user) => {
-    //     res.status(200).send(user)
-    //   })
-    //   .catch(err => {
-    //     next(err)
-    //   })
   }
 
   static sendVerifyEmail = async ({ subject, email, userName, verificationToken }:SendVerifyEmailProps) => {

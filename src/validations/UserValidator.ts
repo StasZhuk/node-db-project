@@ -36,7 +36,7 @@ export class UserValidator {
         }),
 
       body('password', "Password is required")
-        .isAlphanumeric()
+        .isString()
         .isLength({ min: 4 })
         .withMessage("Password min length is 4 character"),
 
