@@ -1,6 +1,7 @@
 import User from "../models/User"
 import { validationResult } from 'express-validator'
 import Utils from "../utils/Utils"
+import NodeMailer from "../utils/NodeMailer"
 
 export class UserController {
   constructor() { }
@@ -30,14 +31,17 @@ export class UserController {
       status: status || "active",
     }
 
-    console.log(new User(userData))
-
-    // try {
-    //   const user = await new User(userData).save()
-    //   res.send(user)
-    // } catch (error) {
-    //   next(error)
-    // }
+    try {
+      const user = await new User(userData).save()
+      await NodeMailer.sendEmail({
+        to: [email],
+        subject: "Verify your email",
+        html: `<h1>Hello, ${user.name}! Please verify your Email</h1><p>Link for verification your email: <a href="https://localhost:3000/users/verify?email=${user.email}&token=${user.verification_token}">verify email</a></p>`,
+      })
+      res.send(user)
+    } catch (error) {
+      next(error)
+    }
 
     // user.save()
     //   .then((user) => {
@@ -50,6 +54,7 @@ export class UserController {
 
   static verifyEmail = (req, res, next) => {
     const { verification_token, email } = req.body
+    // console.log(req)
 
     try {
       const user = User.findOneAndUpdate({
@@ -61,6 +66,8 @@ export class UserController {
       }, {
         new: true
       })
+
+      console.log("user", user)
 
       if (user) {
         res.send(user)

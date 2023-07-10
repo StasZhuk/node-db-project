@@ -3,6 +3,8 @@ import { environmentsProd } from "./environment.prod";
 
 export interface Environment {
   db_uri: string;
+  nodemailerGmailAccount: string;
+  nodemailerGmailPassword: string;
 }
 
 export const getEnvironmentVars = () => {

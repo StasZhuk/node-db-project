@@ -1,4 +1,5 @@
 import { body } from "express-validator";
+import User from "../models/User";
 
 export class UserValidator {
   constructor() { }
@@ -19,7 +20,20 @@ export class UserValidator {
         .exists()
         .notEmpty()
         .isEmail()
-        .withMessage('Email is incorrect'),
+        .withMessage('Email is incorrect')
+        .custom((email, { req }) => {
+          return User.findOne({
+            email
+          }).then((user) => {
+            if (user) {
+              throw("This Email is already exist")
+            }
+
+            return true
+          }).catch((error) => {
+            throw new Error(error)
+          })
+        }),
 
       body('password', "Password is required")
         .isAlphanumeric()
