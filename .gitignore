@@ -1,5 +1,4 @@
 node_modules
 .env
-src/environments/**
 package-lock.json
 .vscode
