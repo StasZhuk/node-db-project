@@ -5,6 +5,7 @@ export interface Environment {
   db_uri: string;
   nodemailerGmailAccount: string;
   nodemailerGmailPassword: string;
+  jwt_secret: string;
 }
 
 export const getEnvironmentVars = () => {

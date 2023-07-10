@@ -17,10 +17,10 @@ class UserRouter {
   }
 
   getRoutes() {
-    this.router.get('/all', UserController.users)
     this.router.get(
-      '/resend-verification-email', 
+      '/resend-verification-email',
       UserValidator.resendVerificationEmail(),
+      GlobalMiddleware.checkErrors,
       UserController.resendVerificationEmail)
   }
 
@@ -30,6 +30,13 @@ class UserRouter {
       UserValidator.signup(),
       GlobalMiddleware.checkErrors,
       UserController.signup
+    )
+
+    this.router.post(
+      '/login',
+      UserValidator.login(),
+      GlobalMiddleware.checkErrors,
+      UserController.login
     )
   }
 

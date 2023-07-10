@@ -29,6 +29,7 @@ export class UserValidator {
               throw ("This Email is already exist")
             }
 
+
             return true
           }).catch((error) => {
             throw new Error(error)
@@ -49,6 +50,35 @@ export class UserValidator {
         .exists()
         .notEmpty()
         .isString(),
+    ]
+  }
+
+  static login() {
+    return [
+      body('email', 'Email is required')
+      .exists()
+      .notEmpty()
+      .isEmail()
+      .withMessage('Email is incorrect')
+      .custom((email, { req }) => {
+        return User.findOne({
+          email
+        }).then((user) => {
+          if (user) {
+            req.user = user
+            return true
+          }
+          
+          throw ("User with this Email is not exist")
+        }).catch((error) => {
+          throw new Error(error)
+        })
+      }),
+
+    body('password', "Password is required")
+      .isString()
+      .isLength({ min: 4 })
+      .withMessage("Password min length is 4 character"),
     ]
   }
 

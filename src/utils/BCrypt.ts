@@ -5,7 +5,7 @@ export default class BCrypt {
     return bc.hash(password, saltRounds);
   }
 
-  async compare(password: string, hash: string) {
+  static async compare(password: string, hash: string) {
     return bc.compare(password, hash);
   }
 }

@@ -1,8 +1,8 @@
 import User from "../models/User"
-import { validationResult } from 'express-validator'
 import Utils from "../utils/Utils"
 import NodeMailer from "../utils/NodeMailer"
 import BCrypt from "../utils/BCrypt"
+import Jwt from "../utils/Jwt"
 
 type SendVerifyEmailProps = {
   email: string;
@@ -14,13 +14,33 @@ type SendVerifyEmailProps = {
 export class UserController {
   constructor() { }
 
-  static signup = async (req, res, next) => {
-    const error = validationResult(req)
+  private static generateUserJwtToken(user_id: any, email: string) {
+    return Jwt.sign({
+      user_id,
+      email,
+    }, { expiresIn: '180d' })
+  }
 
-    if (!error.isEmpty()) {
-      next(new Error(error.array()[0].msg))
+  static async login(req, res, next) {
+    const { password } = req.body
+
+    try {
+      const isUserPassword = await BCrypt.compare(password, req.user.password)
+
+      if (isUserPassword) {
+        res.json({
+          token: "",
+          user: req.user
+        })
+      } else {
+        throw new Error("Password is incorrect")
+      }
+    } catch (error) {
+      next(error)
     }
+  }
 
+  static signup = async (req, res, next) => {
     const {
       name,
       email,
@@ -30,8 +50,6 @@ export class UserController {
       status,
     } = req.body
 
-    
-    
     try {
       const encryptedPassword = await BCrypt.encrypt(password)
       const userData = {
@@ -44,19 +62,25 @@ export class UserController {
       }
 
       const user = await new User(userData).save()
+      const token = this.generateUserJwtToken(user._id, user.email)
+
+      res.json({
+        token,
+        user
+      })
+
       await this.sendVerifyEmail({
         subject: "Verify your email",
         email: user.email,
         userName: user.name,
         verificationToken: user.verification_token
       })
-      res.send(user)
     } catch (error) {
       next(error)
     }
   }
 
-  static sendVerifyEmail = async ({ subject, email, userName, verificationToken }:SendVerifyEmailProps) => {
+  static async sendVerifyEmail({ subject, email, userName, verificationToken }: SendVerifyEmailProps) {
     return NodeMailer.sendEmail({
       to: [email],
       subject,
@@ -64,7 +88,7 @@ export class UserController {
     })
   }
 
-  static verifyEmail = async (req, res, next) => {
+  static async verifyEmail(req, res, next) {
     const { verification_token, email } = req.body
 
     try {
@@ -88,11 +112,7 @@ export class UserController {
     }
   }
 
-  static users = (req, res) => {
-    res.status(200).send("Users")
-  }
-
-  static resendVerificationEmail = async (req, res, next) => {
+  static async resendVerificationEmail(req, res, next) {
     const email = req.query.email
     const verification_token = Utils.generateVerificationToken()
     const verification_token_time = Utils.getVerificationTokenTime()
