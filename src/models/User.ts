@@ -12,7 +12,7 @@ const userSchema = new Schema({
   updated_at: { type: Date, require: true, default: new Date() },
   email_verified: { type: Boolean, require: true, default: false },
   verification_token: { type: Number, require: true, default: Utils.generateVerificationToken() },
-  verification_token_time: { type: Date, require: true, default: Date.now() + new Utils().MAX_VERIFICATION_TIME }
+  verification_token_time: { type: Date, require: true, default: Utils.getVerificationTokenTime() }
 })
 
 export default model("users", userSchema)

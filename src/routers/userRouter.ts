@@ -18,6 +18,10 @@ class UserRouter {
 
   getRoutes() {
     this.router.get('/all', UserController.users)
+    this.router.get(
+      '/resend-verification-email', 
+      UserValidator.resendVerificationEmail(),
+      UserController.resendVerificationEmail)
   }
 
   postRoutes() {

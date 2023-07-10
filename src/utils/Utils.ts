@@ -1,5 +1,5 @@
 export default class Utils {
-  public MAX_VERIFICATION_TIME = 5 * 60 * 1000
+  static MAX_VERIFICATION_TIME = 5 * 60 * 1000
 
   static generateVerificationToken(length: number = 8):number {
     let token = ''
@@ -9,5 +9,9 @@ export default class Utils {
     }
 
     return parseInt(token)
+  }
+
+  static getVerificationTokenTime():number {
+    return Date.now() + this.MAX_VERIFICATION_TIME
   }
 }

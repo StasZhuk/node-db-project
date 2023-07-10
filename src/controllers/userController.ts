@@ -3,6 +3,13 @@ import { validationResult } from 'express-validator'
 import Utils from "../utils/Utils"
 import NodeMailer from "../utils/NodeMailer"
 
+type SendVerifyEmailProps = {
+  email: string;
+  userName: string;
+  subject: string;
+  verificationToken: number;
+}
+
 export class UserController {
   constructor() { }
 
@@ -33,10 +40,11 @@ export class UserController {
 
     try {
       const user = await new User(userData).save()
-      await NodeMailer.sendEmail({
-        to: [email],
+      await this.sendVerifyEmail({
         subject: "Verify your email",
-        html: `<h1>Hello, ${user.name}! Please verify your Email</h1><p>Link for verification your email: <a href="https://localhost:3000/users/verify?email=${user.email}&token=${user.verification_token}">verify email</a></p>`,
+        email: user.email,
+        userName: user.name,
+        verificationToken: user.verification_token
       })
       res.send(user)
     } catch (error) {
@@ -52,12 +60,19 @@ export class UserController {
     //   })
   }
 
-  static verifyEmail = (req, res, next) => {
+  static sendVerifyEmail = async ({ subject, email, userName, verificationToken }:SendVerifyEmailProps) => {
+    return NodeMailer.sendEmail({
+      to: [email],
+      subject,
+      html: `<h1>Hello, ${userName}! Please verify your Email</h1><p>Link for verification your email: <a href="https://localhost:3000/users/verify?email=${email}&token=${verificationToken}">verify email</a></p>`,
+    })
+  }
+
+  static verifyEmail = async (req, res, next) => {
     const { verification_token, email } = req.body
-    // console.log(req)
 
     try {
-      const user = User.findOneAndUpdate({
+      const user = await User.findOneAndUpdate({
         email,
         verification_token,
         verification_token_time: { $gt: Date.now() }
@@ -66,8 +81,6 @@ export class UserController {
       }, {
         new: true
       })
-
-      console.log("user", user)
 
       if (user) {
         res.send(user)
@@ -81,6 +94,37 @@ export class UserController {
 
   static users = (req, res) => {
     res.status(200).send("Users")
+  }
+
+  static resendVerificationEmail = async (req, res, next) => {
+    const email = req.query.email
+    const verification_token = Utils.generateVerificationToken()
+    const verification_token_time = Utils.getVerificationTokenTime()
+
+    try {
+      const user = await User.findOneAndUpdate({
+        email
+      }, {
+        verification_token,
+        verification_token_time
+      }, {
+        new: true
+      })
+
+      if (user) {
+        await this.sendVerifyEmail({
+          subject: "Resend verification email",
+          email,
+          userName: user.name,
+          verificationToken: user.verification_token
+        })
+        res.send({ success: true })
+      } else {
+        throw new Error("Resend verification email error: user isn't exist")
+      }
+    } catch (error) {
+      next(error)
+    }
   }
 }
 

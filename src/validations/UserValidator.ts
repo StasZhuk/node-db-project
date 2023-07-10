@@ -1,4 +1,4 @@
-import { body } from "express-validator";
+import { body, query } from "express-validator";
 import User from "../models/User";
 
 export class UserValidator {
@@ -26,7 +26,7 @@ export class UserValidator {
             email
           }).then((user) => {
             if (user) {
-              throw("This Email is already exist")
+              throw ("This Email is already exist")
             }
 
             return true
@@ -55,11 +55,21 @@ export class UserValidator {
   static verifyEmail() {
     return [
       body('verification_token', 'Verification token is required')
-      .exists()
-      .notEmpty()
-      .isString(),
+        .exists()
+        .notEmpty()
+        .isString(),
 
       body('email', 'Email is required')
+        .exists()
+        .notEmpty()
+        .isEmail()
+        .withMessage('Email is incorrect'),
+    ]
+  }
+
+  static resendVerificationEmail() {
+    return [
+      query('email', 'Email is required')
         .exists()
         .notEmpty()
         .isEmail()
