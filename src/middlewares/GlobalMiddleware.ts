@@ -18,13 +18,18 @@ export default class GlobalMiddleware {
     const authorization = req.headers.authorization
     const token = authorization ? authorization.replace('Bearer ', '') : null
     
-    req.errorStatus = 401
     try {
+      if (token === null) {
+        req.errorStatus = 401
+        next(new Error("Auth token not provided"))
+      }
+
       const encodedToken = Jwt.verify(token)
-      req.user = encodedToken
+      req.encodedToken = encodedToken
       next()
     } catch (error) {
-      next(error)
+      req.errorStatus = 401
+      next(new Error("Auth token not provided"))
     }
   }
 }

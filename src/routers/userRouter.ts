@@ -18,7 +18,7 @@ class UserRouter {
 
   getRoutes() {
     this.router.get(
-      '/resend-verification-email',
+      '/verify/email-resend',
       GlobalMiddleware.auth,
       UserController.resendVerificationEmail)
   }
@@ -39,10 +39,10 @@ class UserRouter {
     )
 
     this.router.post(
-      "/verify",
+      "/verify/email",
+      GlobalMiddleware.auth,
       UserValidator.verifyEmailToken(),
       GlobalMiddleware.checkErrors,
-      GlobalMiddleware.auth,
       UserController.verifyEmail
     )
 
@@ -51,12 +51,12 @@ class UserRouter {
       UserValidator.resetPasswordEmail(),
       GlobalMiddleware.checkErrors,
       UserController.sendResetPasswordToken
-      )
-      
-      this.router.post(
-        "/reset/password-confirm",
-        UserValidator.resetPasswordConfirm(),
-        GlobalMiddleware.checkErrors,
+    )
+
+    this.router.post(
+      "/reset/password-confirm",
+      UserValidator.resetPasswordConfirm(),
+      GlobalMiddleware.checkErrors,
       UserController.resetPassword
     )
   }

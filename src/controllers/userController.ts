@@ -18,9 +18,9 @@ type VerifyEmailBody = {
 export class UserController {
   constructor() { }
 
-  private static generateUserJwtToken(user_id: any, email: string) {
+  private static generateUserJwtToken(userId: any, email: string) {
     return Jwt.sign({
-      user_id,
+      aud: userId,
       email,
     }, { expiresIn: '180d' })
   }
@@ -94,9 +94,39 @@ export class UserController {
     }
   }
 
+  static resendVerificationEmail = async (req, res, next) => {
+    const { email } = req.encodedToken
+    const email_verification_token = Utils.generateVerificationToken()
+    const email_verification_token_time = Utils.getVerificationTokenTime()
+
+    try {
+      const user = await User.findOneAndUpdate({
+        email
+      }, {
+        email_verification_token,
+        email_verification_token_time,
+        updated_at: new Date(),
+      })
+
+      if (user) {
+        res.send({ success: true })
+        await this.sendVerifyEmail({
+          subject: "Resend verification email",
+          email,
+          userName: user.name,
+          verificationToken: user.email_verification_token
+        })
+      } else {
+        throw new Error("Resend verification email error: user isn't exist")
+      }
+    } catch (error) {
+      next(error)
+    }
+  }
+
   static verifyEmail = async (req, res, next) => {
     const { email_verification_token } = req.body as VerifyEmailBody
-    const { email } = req.user
+    const { email } = req.encodedToken
 
     try {
       const user = await User.findOneAndUpdate({
@@ -119,6 +149,7 @@ export class UserController {
       next(error)
     }
   }
+
 
   static sendResetPasswordToken = async (req, res, next) => {
     const { email } = req.user
@@ -165,39 +196,9 @@ export class UserController {
       })
 
       if (user) {
-        res.send({ success: true })
+        res.send(user)
       } else {
         throw new Error("Wrong verification token or verification time is expired, please try again")
-      }
-    } catch (error) {
-      next(error)
-    }
-  }
-
-  static resendVerificationEmail = async (req, res, next) => {
-    const { email } = req.user
-    const email_verification_token = Utils.generateVerificationToken()
-    const email_verification_token_time = Utils.getVerificationTokenTime()
-
-    try {
-      const user = await User.findOneAndUpdate({
-        email
-      }, {
-        email_verification_token,
-        email_verification_token_time,
-        updated_at: new Date(),
-      })
-
-      if (user) {
-        res.send({ success: true })
-        await this.sendVerifyEmail({
-          subject: "Resend verification email",
-          email,
-          userName: user.name,
-          verificationToken: user.email_verification_token
-        })
-      } else {
-        throw new Error("Resend verification email error: user isn't exist")
       }
     } catch (error) {
       next(error)
