@@ -104,7 +104,8 @@ export class UserController {
         email_verification_token,
         email_verification_token_time: { $gt: Date.now() }
       }, {
-        email_verified: true
+        email_verified: true,
+        updated_at: new Date(),
       }, {
         new: true
       })
@@ -129,6 +130,7 @@ export class UserController {
       }, {
         reset_password_token: resetPasswordToken,
         reset_password_token_time: Utils.getVerificationTokenTime(),
+        updated_at: new Date(),
       })
 
       if (user) {
@@ -157,6 +159,7 @@ export class UserController {
         reset_password_token_time: { $gt: Date.now() }
       }, {
         password: encryptedPassword,
+        updated_at: new Date(),
       }, {
         new: true
       })
@@ -181,7 +184,8 @@ export class UserController {
         email
       }, {
         email_verification_token,
-        email_verification_token_time
+        email_verification_token_time,
+        updated_at: new Date(),
       })
 
       if (user) {
