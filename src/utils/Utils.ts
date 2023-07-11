@@ -1,17 +1,17 @@
 export default class Utils {
   static MAX_VERIFICATION_TIME = 5 * 60 * 1000
 
-  static generateVerificationToken(length: number = 8):number {
+  static generateVerificationToken(length: number = 8):string {
     let token = ''
 
     for (let i = 0; i < length; i++) {
         token += Math.floor(Math.random() * 10)
     }
 
-    return parseInt(token)
+    return token
   }
 
-  static getVerificationTokenTime():number {
-    return Date.now() + this.MAX_VERIFICATION_TIME
+  static getVerificationTokenTime(time?:number):number {
+    return Date.now() + (time || this.MAX_VERIFICATION_TIME)
   }
 }

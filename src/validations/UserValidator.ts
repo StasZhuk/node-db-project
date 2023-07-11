@@ -1,5 +1,20 @@
-import { body, query } from "express-validator";
+import { body } from "express-validator";
 import User from "../models/User";
+
+const checkUserByEmail = (email, { req }) => {
+  return User.findOne({
+    email
+  }).then((user) => {
+    if (user) {
+      req.user = user
+      return true
+    }
+
+    throw ("User with this Email is not exist")
+  }).catch((error) => {
+    throw new Error(error)
+  })
+}
 
 export class UserValidator {
   constructor() { }
@@ -29,7 +44,6 @@ export class UserValidator {
               throw ("This Email is already exist")
             }
 
-
             return true
           }).catch((error) => {
             throw new Error(error)
@@ -56,54 +70,54 @@ export class UserValidator {
   static login() {
     return [
       body('email', 'Email is required')
-      .exists()
-      .notEmpty()
-      .isEmail()
-      .withMessage('Email is incorrect')
-      .custom((email, { req }) => {
-        return User.findOne({
-          email
-        }).then((user) => {
-          if (user) {
-            req.user = user
-            return true
-          }
-          
-          throw ("User with this Email is not exist")
-        }).catch((error) => {
-          throw new Error(error)
-        })
-      }),
+        .exists()
+        .notEmpty()
+        .isEmail()
+        .withMessage('Email is incorrect')
+        .custom(checkUserByEmail),
 
-    body('password', "Password is required")
-      .isString()
-      .isLength({ min: 4 })
-      .withMessage("Password min length is 4 character"),
+      body('password', "Password is required")
+        .isString()
+        .isLength({ min: 4 })
+        .withMessage("Password min length is 4 character"),
     ]
   }
 
-  static verifyEmail() {
+  static verifyEmailToken() {
     return [
-      body('verification_token', 'Verification token is required')
+      body('email_verification_token', 'Verification token is required')
+        .exists()
+        .notEmpty()
+        .isString()
+    ]
+  }
+
+  static resetPasswordEmail() {
+    return [
+      body('email', "Email is required")
+        .exists()
+        .notEmpty()
+        .isEmail()
+        .withMessage('Email is incorrect')
+        .custom(checkUserByEmail),
+    ]
+  }
+
+  static resetPasswordConfirm() {
+    return [
+      body('email', "Email is required")
+        .exists()
+        .notEmpty()
+        .isEmail()
+        .withMessage('Email is incorrect'),
+      body('reset_password_token', "Reset password token is required")
         .exists()
         .notEmpty()
         .isString(),
-
-      body('email', 'Email is required')
-        .exists()
-        .notEmpty()
-        .isEmail()
-        .withMessage('Email is incorrect'),
-    ]
-  }
-
-  static resendVerificationEmail() {
-    return [
-      query('email', 'Email is required')
-        .exists()
-        .notEmpty()
-        .isEmail()
-        .withMessage('Email is incorrect'),
+      body('new_password', "New Password is required")
+        .isString()
+        .isLength({ min: 4 })
+        .withMessage("Password min length is 4 character"),
     ]
   }
 }

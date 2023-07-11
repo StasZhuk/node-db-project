@@ -7,8 +7,12 @@ import Jwt from "../utils/Jwt"
 type SendVerifyEmailProps = {
   email: string;
   userName: string;
-  subject: string;
-  verificationToken: number;
+  subject?: string;
+  verificationToken: string;
+}
+
+type VerifyEmailBody = {
+  email_verification_token: string
 }
 
 export class UserController {
@@ -21,17 +25,31 @@ export class UserController {
     }, { expiresIn: '180d' })
   }
 
+  private static async sendResetPasswordEmail({ email, userName, verificationToken }: SendVerifyEmailProps) {
+    return NodeMailer.sendEmail({
+      to: [email],
+      subject: "Reset password information",
+      html: `<h1>Hello, ${userName}! Use this token to reset your password</h1><p>Verification token: ${verificationToken}</p>`,
+    })
+  }
+
+  private static async sendVerifyEmail({ subject, email, userName, verificationToken }: SendVerifyEmailProps) {
+    return NodeMailer.sendEmail({
+      to: [email],
+      subject,
+      html: `<h1>Hello, ${userName}! Please verify your Email</h1><p>Link for verification your email: <a href="https://localhost:3000/users/verify?email=${email}&token=${verificationToken}">verify email</a></p>`,
+    })
+  }
+
   static login = async (req, res, next) => {
     const { password } = req.body
 
     try {
       const isUserPassword = await BCrypt.compare(password, req.user.password)
-      
+
       if (isUserPassword) {
-        res.json({
-          token: this.generateUserJwtToken(req.user._id, req.user.email),
-          user: req.user
-        })
+        const token = this.generateUserJwtToken(req.user._id, req.user.email)
+        res.json({ token, user: req.user })
       } else {
         throw new Error("Password is incorrect")
       }
@@ -57,45 +75,34 @@ export class UserController {
         email,
         phone,
         password: encryptedPassword,
-        type: type || "customer",
+        type: type || "user",
         status: status || "active",
       }
 
       const user = await new User(userData).save()
       const token = this.generateUserJwtToken(user._id, user.email)
 
-      res.json({
-        token,
-        user
-      })
-
+      res.json({ token, user })
       await this.sendVerifyEmail({
         subject: "Verify your email",
         email: user.email,
         userName: user.name,
-        verificationToken: user.verification_token
+        verificationToken: user.email_verification_token
       })
     } catch (error) {
       next(error)
     }
   }
 
-  static async sendVerifyEmail({ subject, email, userName, verificationToken }: SendVerifyEmailProps) {
-    return NodeMailer.sendEmail({
-      to: [email],
-      subject,
-      html: `<h1>Hello, ${userName}! Please verify your Email</h1><p>Link for verification your email: <a href="https://localhost:3000/users/verify?email=${email}&token=${verificationToken}">verify email</a></p>`,
-    })
-  }
-
-  static async verifyEmail(req, res, next) {
-    const { verification_token, email } = req.body
+  static verifyEmail = async (req, res, next) => {
+    const { email_verification_token } = req.body as VerifyEmailBody
+    const { email } = req.user
 
     try {
       const user = await User.findOneAndUpdate({
         email,
-        verification_token,
-        verification_token_time: { $gt: Date.now() }
+        email_verification_token,
+        email_verification_token_time: { $gt: Date.now() }
       }, {
         email_verified: true
       }, {
@@ -103,38 +110,88 @@ export class UserController {
       })
 
       if (user) {
-        res.send(user)
+        res.send({ success: true })
       } else {
-        throw new Error("Email verification token time is expired, please signup again")
+        throw new Error("Wrong verification token or verification time is expired, please signup again")
       }
     } catch (error) {
       next(error)
     }
   }
 
-  static async resendVerificationEmail(req, res, next) {
-    const email = req.query.email
-    const verification_token = Utils.generateVerificationToken()
-    const verification_token_time = Utils.getVerificationTokenTime()
+  static sendResetPasswordToken = async (req, res, next) => {
+    const { email } = req.user
+    const resetPasswordToken = Utils.generateVerificationToken()
 
     try {
       const user = await User.findOneAndUpdate({
         email
       }, {
-        verification_token,
-        verification_token_time
+        reset_password_token: resetPasswordToken,
+        reset_password_token_time: Utils.getVerificationTokenTime(),
+      })
+
+      if (user) {
+        res.send({ success: true })
+        await this.sendResetPasswordEmail({
+          email: email,
+          userName: user.name,
+          verificationToken: resetPasswordToken
+        })
+      } else {
+        throw new Error("User with this email isn't exist")
+      }
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  static resetPassword = async (req, res, next) => {
+    const { reset_password_token, new_password, email } = req.body
+
+    try {
+      const encryptedPassword = await BCrypt.encrypt(new_password)
+      const user = await User.findOneAndUpdate({
+        email,
+        reset_password_token,
+        reset_password_token_time: { $gt: Date.now() }
+      }, {
+        password: encryptedPassword,
       }, {
         new: true
       })
 
       if (user) {
+        res.send({ success: true })
+      } else {
+        throw new Error("Wrong verification token or verification time is expired, please try again")
+      }
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  static resendVerificationEmail = async (req, res, next) => {
+    const { email } = req.user
+    const email_verification_token = Utils.generateVerificationToken()
+    const email_verification_token_time = Utils.getVerificationTokenTime()
+
+    try {
+      const user = await User.findOneAndUpdate({
+        email
+      }, {
+        email_verification_token,
+        email_verification_token_time
+      })
+
+      if (user) {
+        res.send({ success: true })
         await this.sendVerifyEmail({
           subject: "Resend verification email",
           email,
           userName: user.name,
-          verificationToken: user.verification_token
+          verificationToken: user.email_verification_token
         })
-        res.send({ success: true })
       } else {
         throw new Error("Resend verification email error: user isn't exist")
       }

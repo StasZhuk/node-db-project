@@ -19,8 +19,7 @@ class UserRouter {
   getRoutes() {
     this.router.get(
       '/resend-verification-email',
-      UserValidator.resendVerificationEmail(),
-      GlobalMiddleware.checkErrors,
+      GlobalMiddleware.auth,
       UserController.resendVerificationEmail)
   }
 
@@ -38,24 +37,35 @@ class UserRouter {
       GlobalMiddleware.checkErrors,
       UserController.login
     )
-  }
 
-  putRoutes() {
-
-  }
-
-  patchRoutes() {
-    this.router.patch(
+    this.router.post(
       "/verify",
-      UserValidator.verifyEmail(),
+      UserValidator.verifyEmailToken(),
       GlobalMiddleware.checkErrors,
+      GlobalMiddleware.auth,
       UserController.verifyEmail
+    )
+
+    this.router.post(
+      "/reset/password-token",
+      UserValidator.resetPasswordEmail(),
+      GlobalMiddleware.checkErrors,
+      UserController.sendResetPasswordToken
+      )
+      
+      this.router.post(
+        "/reset/password-confirm",
+        UserValidator.resetPasswordConfirm(),
+        GlobalMiddleware.checkErrors,
+      UserController.resetPassword
     )
   }
 
-  deleteRoutes() {
+  putRoutes() { }
 
-  }
+  patchRoutes() { }
+
+  deleteRoutes() { }
 }
 
 export default new UserRouter().router
