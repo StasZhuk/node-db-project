@@ -5,6 +5,7 @@ import bodyParser from 'body-parser'
 
 import { getEnvironmentVars } from "./environments"
 import userRouter from "./routers/userRouter"
+import bannerRouter from "./routers/bannerRouter"
 
 export default class Server {
   public app: Application = express()
@@ -45,7 +46,9 @@ export default class Server {
   }
 
   setRoutes() {
-    this.app.use('/users', userRouter)
+    this.app.use('/src/uploads', express.static("src/uploads"))
+    this.app.use('/api/users', userRouter)
+    this.app.use('/api/banners', bannerRouter)
   }
 
   error404Handler() {

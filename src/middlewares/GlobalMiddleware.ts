@@ -1,5 +1,7 @@
 import { validationResult } from 'express-validator';
 import Jwt from '../utils/Jwt';
+import { JwtPayload } from 'jsonwebtoken';
+import { UserRolesEnum } from '../models/User';
 
 export default class GlobalMiddleware {
   constructor() { }
@@ -31,5 +33,16 @@ export default class GlobalMiddleware {
       req.errorStatus = 401
       next(new Error("Auth token not provided"))
     }
+  }
+
+  static isAdminRole(req, res, next) {
+    const { role } = req.encodedToken
+
+    if (role !== UserRolesEnum.admin){
+      req.errorStatus = 401
+      next(new Error("You role doesn't have permission for this!")) 
+    }
+
+    next()
   }
 }

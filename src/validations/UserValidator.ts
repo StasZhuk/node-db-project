@@ -1,3 +1,4 @@
+import { UserRolesEnum, UserRolesTypes } from './../models/User';
 import { body } from "express-validator";
 import User from "../models/User";
 
@@ -55,10 +56,19 @@ export class UserValidator {
         .isLength({ min: 4 })
         .withMessage("Password min length is 4 character"),
 
-      body('type', 'User role type is required')
+      body('role', 'User role type is required')
         .exists()
         .notEmpty()
-        .isString(),
+        .isString()
+        .custom((role) => {
+          const userRolesValues = Object.values(UserRolesEnum)
+
+          if (userRolesValues.includes(role)) {
+            return true
+          }
+
+          throw (`role is incorrect, you can use only one of this ${JSON.stringify(userRolesValues)}`)
+        }),
 
       body('status', 'User status is required')
         .exists()

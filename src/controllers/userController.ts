@@ -1,4 +1,4 @@
-import User from "../models/User"
+import User, { UserCreate, UserCreated, UserJwt, UserRolesTypes } from "../models/User"
 import Utils from "../utils/Utils"
 import NodeMailer from "../utils/NodeMailer"
 import BCrypt from "../utils/BCrypt"
@@ -18,10 +18,11 @@ type VerifyEmailBody = {
 export class UserController {
   constructor() { }
 
-  private static generateUserJwtToken(userId: any, email: string) {
+  private static generateUserJwtToken({ aud, email, role }: UserJwt) {
     return Jwt.sign({
-      aud: userId,
+      aud,
       email,
+      role,
     }, { expiresIn: '180d' })
   }
 
@@ -43,13 +44,18 @@ export class UserController {
 
   static login = async (req, res, next) => {
     const { password } = req.body
+    const user = req.user as UserCreated
 
     try {
       const isUserPassword = await BCrypt.compare(password, req.user.password)
 
       if (isUserPassword) {
-        const token = this.generateUserJwtToken(req.user._id, req.user.email)
-        res.json({ token, user: req.user })
+        const token = this.generateUserJwtToken({
+          aud: user._id,
+          email: user.email,
+          role: user.role
+        })
+        res.json({ token, user })
       } else {
         throw new Error("Password is incorrect")
       }
@@ -64,25 +70,30 @@ export class UserController {
       email,
       phone,
       password,
-      type,
+      role,
       status,
-    } = req.body
+    } = req.body as UserCreate
 
     try {
-      const encryptedPassword = await BCrypt.encrypt(password)
+      const encryptedPassword: string = await BCrypt.encrypt(password)
       const userData = {
         name,
         email,
         phone,
         password: encryptedPassword,
-        type: type || "user",
-        status: status || "active",
+        role,
+        status,
       }
 
       const user = await new User(userData).save()
-      const token = this.generateUserJwtToken(user._id, user.email)
+      const token = this.generateUserJwtToken({
+        aud: user._id,
+        email: user.email,
+        role: user.role as UserRolesTypes
+      })
 
       res.json({ token, user })
+      
       await this.sendVerifyEmail({
         subject: "Verify your email",
         email: user.email,
